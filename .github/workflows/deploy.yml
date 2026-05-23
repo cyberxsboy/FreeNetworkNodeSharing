@@ -6,8 +6,6 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths:
-      - 'config.json'
 
 permissions:
   contents: read
@@ -23,134 +21,62 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Read config and setup variables
-        id: config
-        run: |
-          echo "Reading config.json..."
-          DOMAIN=$(python3 -c "import json; c=json.load(open('config.json')); print(c.get('siteDomain',''))")
-          PROTOCOL=$(python3 -c "import json; c=json.load(open('config.json')); print(c.get('settings',{}).get('protocol','https'))")
-          
-          if [[ "$DOMAIN" == https://* ]] || [[ "$DOMAIN" == http://* ]]; then
-            BASE_URL="$DOMAIN"
-          else
-            BASE_URL="${PROTOCOL}://${DOMAIN}"
-          fi
-          
-          echo "domain=$DOMAIN" >> $GITHUB_OUTPUT
-          echo "protocol=$PROTOCOL" >> $GITHUB_OUTPUT
-          echo "base_url=$BASE_URL" >> $GITHUB_OUTPUT
-          
-          echo "Config loaded:"
-          echo "  Domain: $DOMAIN"
-          echo "  Protocol: $PROTOCOL"
-          echo "  Base URL: $BASE_URL"
+      - uses: actions/checkout@v4
 
       - name: Generate sitemap.xml
         run: |
-          URL="${{ steps.config.outputs.base_url }}"
-          TODAY=$(date +%Y-%m-%d)
+          DOMAIN=$(python3 -c "import json; print(json.load(open('config.json')).get('siteDomain',''))" 2>/dev/null || echo "")
+          PROTO=$(python3 -c "print(json.load(open('config.json')).get('settings',{}).get('protocol','https'))" 2>/dev/null || echo "https")
           
-          cat > sitemap.xml << EOF
+          [[ "$DOMAIN" == http* ]] && URL="$DOMAIN" || URL="${PROTO}://${DOMAIN}"
+          
+          cat > sitemap.xml << 'XMLEOF'
           <?xml version='1.0' encoding='utf-8'?>
           <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-            <url>
-              <loc>${URL}/</loc>
-              <lastmod>${TODAY}</lastmod>
-              <changefreq>daily</changefreq>
-              <priority>1.0</priority>
-            </url>
-            <url>
-              <loc>${URL}/index.html</loc>
-              <lastmod>${TODAY}</lastmod>
-              <changefreq>daily</changefreq>
-              <priority>1.0</priority>
-            </url>
+            <url><loc>BASEURL/</loc><lastmod>DATE</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
+            <url><loc>BASEURL/index.html</loc><lastmod>DATE</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
           </urlset>
-          EOF
+          XMLEOF
           
-          echo "✅ sitemap.xml generated"
-          echo "URL: ${URL}/"
-          ls -lh sitemap.xml
+          sed -i "s|BASEURL|${URL}|g; s|DATE|$(date +%Y-%m-%d)|g" sitemap.xml
+          
+          echo "sitemap.xml created with URL: ${URL}"
 
       - name: Generate robots.txt
         run: |
-          URL="${{ steps.config.outputs.base_url }}"
-          NOW=$(date -u '+%Y-%m-%d %H:%M:%S')
+          DOMAIN=$(python3 -c "import json; print(json.load(open('config.json')).get('siteDomain',''))" 2>/dev/null || echo "")
+          PROTO=$(python3 -c "print(json.load(open('config.json')).get('settings',{}).get('protocol','https'))" 2>/dev/null || echo "https")
           
-          cat > robots.txt << EOF
-          # Robots.txt for ${URL}
-          # Generated: ${NOW} UTC
+          [[ "$DOMAIN" == http* ]] && URL="$DOMAIN" || URL="${PROTO}://${DOMAIN}"
           
+          cat > robots.txt << 'EOF'
           User-agent: *
           Allow: /
           Allow: /index.html
           Allow: /sitemap.xml
-          
           Disallow: /*.json$
           Disallow: /*.py$
-          Disallow: /*.sh$
-          Disallow: /*.yml$
-          Disallow: /config*
-          Disallow: /data*
           Disallow: /.github/
-          
-          Sitemap: ${URL}/sitemap.xml
+          Sitemap: BASEURL/sitemap.xml
           EOF
           
-          echo "✅ robots.txt generated"
-          echo "Sitemap: ${URL}/sitemap.xml"
-          ls -lh robots.txt
+          sed -i "s|BASEURL|${URL}|g" robots.txt
+          
+          echo "robots.txt created"
 
-      - name: Update data.json with domain
+      - name: Show generated files
         run: |
-          URL="${{ steps.config.outputs.base_url }}"
-          
-          python3 << PYEOF
-          import json
-          
-          try:
-              with open('data.json', 'r') as f:
-                  data = json.load(f)
-              
-              data['siteDomain'] = '${URL}'
-              
-              with open('data.json', 'w') as f:
-                  json.dump(data, f, ensure_ascii=False, indent=2)
-              
-              print("✅ data.json updated with domain:", "${URL}")
-          except Exception as e:
-              print("⚠️ Could not update data.json:", e)
-          PYEOF
-          
-          ls -lh data.json || true
-
-      - name: Verify generated files
-        run: |
-          echo "=========================================="
-          echo "Verifying generated files..."
-          echo "=========================================="
+          echo "=== sitemap.xml ==="
+          cat sitemap.xml
           echo ""
-          echo "sitemap.xml content (first 5 lines):"
-          head -5 sitemap.xml
-          echo ""
-          echo "robots.txt content:"
+          echo "=== robots.txt ==="
           cat robots.txt
           echo ""
-          echo "File sizes:"
-          ls -lh sitemap.xml robots.txt data.json
-          echo ""
-          echo "=========================================="
-          echo "✅ All files verified!"
-          echo "=========================================="
+          ls -lh sitemap.xml robots.txt
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v4
+      
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
 
@@ -161,6 +87,4 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Deploy to GitHub Pages
-        id: deploy
-        uses: actions/deploy-pages@v4
+      - uses: actions/deploy-pages@v4
