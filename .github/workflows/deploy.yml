@@ -1,85 +1,114 @@
-name: Auto Collect and Deploy
+name: Auto Collect and Deploy to GitHub Pages
 
 on:
+  # 定时任务：每天UTC 0点执行（北京时间8点）
   schedule:
     - cron: '0 0 * * *'
+  
+  # 手动触发（支持参数）
   workflow_dispatch:
     inputs:
-      force_regenerate:
-        description: '强制重新生成所有静态文件（不采集数据）'
-        required: false
-        default: 'false'
+      action_type:
+        description: '选择执行模式'
+        required: true
+        default: 'collect_and_deploy'
         type: choice
         options:
-          - 'false'
-          - 'true'
-      skip_collect:
-        description: '跳过数据采集，仅更新配置相关文件'
-        required: false
-        default: 'false'
-        type: choice
-        options:
-          - 'false'
-          - 'true'
+          - 'collect_and_deploy'        # 完整流程：采集+生成+部署
+          - 'regenerate_only'           # 只重新生成静态文件（不采集）
+          - 'force_regenerate'          # 强制重新生成所有文件
 
+# GitHub Pages 权限配置
 permissions:
   contents: read
   pages: write
   id-token: write
 
+# 防止并发部署冲突
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
-  build:
+  # 构建和准备阶段
+  build-and-prepare:
     runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.check.outputs.should_deploy }}
+    
     steps:
-      - name: Checkout
+      # 1. 检出代码
+      - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2. 设置Python环境
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      # 3. 安装依赖
+      - name: Install Python dependencies
         run: |
           pip install requests
 
-      - name: Check config changes and regenerate static files
+      # 4. 检查是否需要部署
+      - name: Check deployment conditions
+        id: check
         run: |
-          echo "🔍 检查配置文件..."
+          echo "📋 检查部署条件..."
           
+          ACTION="${{ github.event.inputs.action_type }}"
+          echo "执行模式: ${ACTION:-collect_and_deploy (定时任务)}"
+          
+          if [ "$ACTION" = "regenerate_only" ] || [ "$ACTION" = "force_regenerate" ]; then
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            echo "✅ 手动触发：将执行静态文件生成"
+          else
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            echo "✅ 定时任务/完整模式：将执行采集+生成"
+          fi
+
+      # 5. 核心步骤：读取配置并生成所有静态文件
+      - name: Generate static files from config
+        run: |
+          echo "=========================================="
+          echo "🔄 开始生成静态文件"
+          echo "=========================================="
+          
+          # 显示当前配置
           if [ -f "config.json" ]; then
-            echo "✅ 找到配置文件"
+            echo "✅ 找到配置文件: config.json"
             
-            DOMAIN=$(python -c "import json; config=json.load(open('config.json')); print(config.get('siteDomain', ''))")
-            PROTOCOL=$(python -c "import json; config=json.load(open('config.json')); print(config.get('settings', {}).get('protocol', 'https'))")
-            
-            echo "📝 当前配置:"
-            echo "   域名: $DOMAIN"
-            echo "   协议: $PROTOCOL"
-            
-            python << 'EOF'
-            import json
-            import os
-            from datetime import datetime
-            
-            def generate_sitemap():
-                try:
-                    with open('config.json', 'r', encoding='utf-8') as f:
-                        config = json.load(f)
-                    
-                    domain = config.get('siteDomain', 'your-domain.github.io')
-                    protocol = config.get('settings', {}).get('protocol', 'https')
-                    
-                    if not domain.startswith(('http://', 'https://')):
-                        base_url = f"{protocol}://{domain}"
-                    else:
-                        base_url = domain
-                    
-                    sitemap_content = f'''<?xml version='1.0' encoding='utf-8'?>
+            python << 'PYTHON_SCRIPT'
+          import json
+          import os
+          from datetime import datetime
+          
+          print("\n📝 读取配置信息...")
+          
+          with open('config.json', 'r', encoding='utf-8') as f:
+              config = json.load(f)
+          
+          domain = config.get('siteDomain', 'your-domain.github.io')
+          protocol = config.get('settings', {}).get('protocol', 'https')
+          sources = config.get('sources', [])
+          
+          # 构建基础URL
+          if not domain.startswith(('http://', 'https://')):
+              base_url = f"{protocol}://{domain}"
+          else:
+              base_url = domain
+          
+          print(f"   域名: {domain}")
+          print(f"   协议: {protocol}")
+          print(f"   完整URL: {base_url}")
+          print(f"   数据源数量: {len(sources)}")
+          
+          # ========== 1. 生成 sitemap.xml ==========
+          print("\n🗺️ [1/3] 生成网站地图 (sitemap.xml)...")
+          
+          sitemap_content = f'''<?xml version='1.0' encoding='utf-8'?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>{base_url}/</loc>
@@ -94,36 +123,23 @@ jobs:
     <priority>1.0</priority>
   </url>
 </urlset>'''
-                    
-                    with open('sitemap.xml', 'w', encoding='utf-8') as f:
-                        f.write(sitemap_content)
-                    
-                    file_size = os.path.getsize('sitemap.xml')
-                    print(f"✅ 网站地图已生成: sitemap.xml")
-                    print(f"   文件大小: {file_size / 1024:.2f} KB")
-                    print(f"   基础域名: {base_url}")
-                    
-                except Exception as e:
-                    print(f"❌ 网站地图生成失败: {e}")
-            
-            def generate_robots():
-                try:
-                    with open('config.json', 'r', encoding='utf-8') as f:
-                        config = json.load(f)
-                    
-                    domain = config.get('siteDomain', 'your-domain.github.io')
-                    protocol = config.get('settings', {}).get('protocol', 'https')
-                    
-                    if not domain.startswith(('http://', 'https://')):
-                        base_url = f"{protocol}://{domain}"
-                    else:
-                        base_url = domain
-                    
-                    robots_content = f'''# Robots.txt for {base_url}
-# Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+          
+          with open('sitemap.xml', 'w', encoding='utf-8') as f:
+              f.write(sitemap_content)
+          
+          sitemap_size = os.path.getsize('sitemap.xml')
+          print(f"   ✅ sitemap.xml 已生成 ({sitemap_size} bytes)")
+          print(f"   📍 URL: {base_url}/")
+          print(f"   📍 URL: {base_url}/index.html")
+          
+          # ========== 2. 生成 robots.txt ==========
+          print("\n🤖 [2/3] 生成爬虫协议 (robots.txt)...")
+          
+          robots_content = f"""# Robots.txt for {base_url}
+# Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}
 # Auto-generated by Content Collector System
 
-# 允许所有搜索引擎访问
+# 允许搜索引擎访问静态页面
 User-agent: *
 Allow: /
 Allow: /index.html
@@ -140,117 +156,121 @@ Disallow: /data*
 Disallow: /collector*
 Disallow: /.github/
 
-# 禁止访问脚本和工具文件
-Disallow: /*collector*
-Disallow: /*config*
-
-# Sitemap位置
+# 网站地图位置（包含完整域名）
 Sitemap: {base_url}/sitemap.xml
 
-# Crawl-delay建议（秒）
-Crawl-delay: 1'''
-                    
-                    with open('robots.txt', 'w', encoding='utf-8') as f:
-                        f.write(robots_content)
-                    
-                    file_size = os.path.getsize('robots.txt')
-                    print(f"✅ robots.txt已生成: robots.txt")
-                    print(f"   文件大小: {file_size / 1024:.2f} KB")
-                    print(f"   Sitemap URL: {base_url}/sitemap.xml")
-                    
-                except Exception as e:
-                    print(f"❌ robots.txt生成失败: {e}")
+# 爬取延迟（秒）
+Crawl-delay: 1"""
+          
+          with open('robots.txt', 'w', encoding='utf-8') as f:
+              f.write(robots_content)
+          
+          robots_size = os.path.getsize('robots.txt')
+          print(f"   ✅ robots.txt 已生成 ({robots_size} bytes)")
+          print(f"   🔗 Sitemap: {base_url}/sitemap.xml")
+          
+          # ========== 3. 更新 data.json ==========
+          print("\n📄 [3/3] 更新数据文件 (data.json)...")
+          
+          if os.path.exists('data.json'):
+              with open('data.json', 'r', encoding='utf-8') as f:
+                  data = json.load(f)
+              
+              old_domain = data.get('siteDomain', '')
+              data['siteDomain'] = base_url
+              
+              # 同步广告配置
+              ad_config = config.get('ad', {})
+              data['ad'] = ad_config
+              
+              # 清理无效数据源
+              source_names_configured = [s['name'] for s in sources]
+              existing_sources = data.get('sources', {})
+              
+              removed_count = 0
+              for source_name in list(existing_sources.keys()):
+                  if source_name not in source_names_configured:
+                      del existing_sources[source_name]
+                      removed_count += 1
+              
+              # 更新统计信息
+              data['sourceNames'] = list(existing_sources.keys())
+              data['stats'] = {
+                  'totalSources': len(existing_sources),
+                  'totalItems': sum(len(items) for items in existing_sources.values()),
+                  'sourceStats': {name: len(items) for name, items in existing_sources.items()}
+              }
+              
+              with open('data.json', 'w', encoding='utf-8') as f:
+                  json.dump(data, f, ensure_ascii=False, indent=2)
+              
+              data_size = os.path.getsize('data.json')
+              print(f"   ✅ data.json 已更新 ({data_size} bytes)")
+              
+              if old_domain != base_url:
+                  print(f"   🌐 域名已更新: {old_domain} → {base_url}")
+              if removed_count > 0:
+                  print(f"   🗑️ 已清理 {removed_count} 个无效数据源")
+          else:
+              print("   ⚠️  data.json 不存在，跳过更新")
+          
+          # ========== 完成 ==========
+          print("\n" + "="*50)
+          print("✨ 所有静态文件生成完成！")
+          print("="*50)
+          print(f"\n生成的文件：")
+          print(f"  ✅ sitemap.xml  ({os.path.getsize('sitemap.xml')} bytes)")
+          print(f"  ✅ robots.txt   ({os.path.getsize('robots.txt')} bytes)")
+          if os.path.exists('data.json'):
+              print(f"  ✅ data.json    ({os.path.getsize('data.json')} bytes)")
+          
+          print(f"\n使用的域名配置：{base_url}")
+          PYTHON_SCRIPT
             
-            def update_data_json():
-                try:
-                    if not os.path.exists('data.json'):
-                        print("⚠️  data.json不存在，跳过更新")
-                        return
-                    
-                    with open('data.json', 'r', encoding='utf-8') as f:
-                        data = json.load(f)
-                    
-                    with open('config.json', 'r', encoding='utf-8') as f:
-                        config = json.load(f)
-                    
-                    domain = config.get('siteDomain', '')
-                    protocol = config.get('settings', {}).get('protocol', 'https')
-                    
-                    if not domain.startswith(('http://', 'https://')):
-                        new_domain = f"{protocol}://{domain}"
-                    else:
-                        new_domain = domain
-                    
-                    old_domain = data.get('siteDomain', '')
-                    
-                    if old_domain != new_domain:
-                        data['siteDomain'] = new_domain
-                        
-                        ad_config = config.get('ad', {})
-                        data['ad'] = ad_config
-                        
-                        source_names_configured = [s['name'] for s in config.get('sources', [])]
-                        existing_sources = data.get('sources', {})
-                        
-                        for source_name in list(existing_sources.keys()):
-                            if source_name not in source_names_configured:
-                                del existing_sources[source_name]
-                                print(f"   🗑️ 已移除数据源: {source_name}")
-                        
-                        data['sourceNames'] = list(existing_sources.keys())
-                        data['stats'] = {
-                            'totalSources': len(existing_sources),
-                            'totalItems': sum(len(items) for items in existing_sources.values()),
-                            'sourceStats': {name: len(items) for name, items in existing_sources.items()}
-                        }
-                        
-                        with open('data.json', 'w', encoding='utf-8') as f:
-                            json.dump(data, f, ensure_ascii=False, indent=2)
-                        
-                        print(f"✅ 数据文件已更新: data.json")
-                        print(f"   域名: {old_domain} → {new_domain}")
-                    else:
-                        print("ℹ️  data.json域名已是最新")
-                        
-                except Exception as e:
-                    print(f"⚠️  更新data.json失败: {e}")
-            
-            print("\n🗺️ 正在生成网站地图...")
-            generate_sitemap()
-            
-            print("\n🤖 正在生成robots.txt...")
-            generate_robots()
-            
-            print("\n📄 正在检查data.json...")
-            update_data_json()
-            
-            print("\n✨ 所有静态文件生成完成！")
-EOF
-            
+            echo ""
+            echo "✅ 静态文件生成步骤完成"
           else
-            echo "⚠️  未找到配置文件"
+            echo "❌ 错误：未找到 config.json 文件"
+            exit 1
           fi
 
-      - name: Run collector (if needed)
-        if: github.event.inputs.skip_collect != 'true' && github.event.inputs.force_regenerate != 'true'
+      # 6. 执行数据采集（根据模式决定是否执行）
+      - name: Run data collection
+        if: github.event.inputs.action_type != 'regenerate_only' && github.event.inputs.action_type != 'force_regenerate'
         run: |
+          echo "=========================================="
           echo "🚀 开始数据采集..."
+          echo "=========================================="
           python collector.py --once
+          echo ""
+          echo "✅ 数据采集完成"
 
+      # 7. 如果是强制重新生成模式，再次确保文件最新
+      - name: Force regenerate static files (if requested)
+        if: github.event.inputs.action_type == 'force_regenerate'
+        run: |
+          echo "🔄 强制重新生成模式：确保所有文件使用最新配置..."
+          python collector.py --regenerate || true
+
+      # 8. 配置GitHub Pages
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      - name: Upload artifact
+      # 9. 上传构建产物
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
 
+  # 部署阶段
   deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    needs: build
+    needs: build-and-prepare
+    if: needs.build-and-prepare.outputs.should_deploy == 'true'
+    
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
