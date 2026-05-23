@@ -62,23 +62,130 @@ jobs:
           
           sed -i "s|BASEURL|${URL}|g" robots.txt
 
-      - name: Commit files back to repo
+      - name: Update data.json with current config (NO data collection)
+        run: |
+          python3 << 'PYEOF'
+          import json
+          from datetime import datetime
+          
+          print("=" * 60)
+          print("📝 Updating data.json from config.json")
+          print("=" * 60)
+          
+          try:
+              with open('config.json', 'r', encoding='utf-8') as f:
+                  config = json.load(f)
+              
+              domain = config.get('siteDomain', '')
+              protocol = config.get('settings', {}).get('protocol', 'https')
+              
+              if not domain.startswith(('http://', 'https://')):
+                  base_url = f"{protocol}://{domain}"
+              else:
+                  base_url = domain
+              
+              print(f"\nConfig loaded:")
+              print(f"  Domain: {domain}")
+              print(f"  Protocol: {protocol}")
+              print(f"  Base URL: {base_url}")
+              
+              if not base_url or base_url == f"{protocol}://":
+                  print("\n⚠️ No valid domain configured, skipping update")
+                  exit(0)
+              
+              try:
+                  with open('data.json', 'r', encoding='utf-8') as f:
+                      data = json.load(f)
+                  
+                  old_domain = data.get('siteDomain', '')
+                  data['siteDomain'] = base_url
+                  
+                  ad_config = config.get('ad', {})
+                  data['ad'] = ad_config
+                  
+                  sources_cfg = config.get('sources', [])
+                  source_names_configured = [s['name'] for s in sources_cfg]
+                  existing_sources = data.get('sources', {})
+                  
+                  removed_count = 0
+                  for source_name in list(existing_sources.keys()):
+                      if source_name not in source_names_configured:
+                          del existing_sources[source_name]
+                          removed_count += 1
+                  
+                  data['sourceNames'] = list(existing_sources.keys())
+                  data['stats'] = {
+                      'totalSources': len(existing_sources),
+                      'totalItems': sum(len(items) for items in existing_sources.values()),
+                      'sourceStats': {name: len(items) for name, items in existing_sources.items()}
+                  }
+                  
+                  data['lastConfigUpdate'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                  
+                  with open('data.json', 'w', encoding='utf-8') as f:
+                      json.dump(data, f, ensure_ascii=False, indent=2)
+                  
+                  print(f"\n✅ data.json updated successfully!")
+                  print(f"   File size: {__import__('os').path.getsize('data.json')} bytes")
+                  
+                  if old_domain and old_domain != base_url:
+                      print(f"   🌐 Domain changed: {old_domain} -> {base_url}")
+                  if removed_count > 0:
+                      print(f"   🗑️ Removed {removed_count} invalid sources")
+                  
+              except FileNotFoundError:
+                  print(f"\n⚠️ data.json not found, creating new one...")
+                  new_data = {
+                      'siteDomain': base_url,
+                      'ad': config.get('ad', {}),
+                      'sources': {},
+                      'sourceNames': [],
+                      'stats': {
+                          'totalSources': 0,
+                          'totalItems': 0,
+                          'sourceStats': {}
+                      },
+                      'lastConfigUpdate': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                      'lastCollection': None
+                  }
+                  
+                  with open('data.json', 'w', encoding='utf-8') as f:
+                      json.dump(new_data, f, ensure_ascii=False, indent=2)
+                  
+                  print(f"✅ New data.json created")
+              
+              print("\n" + "=" * 60)
+              print("✅ Config sync completed (NO data collection)")
+              print("=" * 60)
+              
+          except Exception as e:
+              print(f"\n❌ Error: {e}")
+              import traceback
+              traceback.print_exc()
+              exit(1)
+          PYEOF
+
+      - name: Commit static files back to repo
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add sitemap.xml robots.txt
-          git diff --cached --quiet || git commit -m "Auto-update static files from config.json"
+          git add sitemap.xml robots.txt data.json
+          git diff --cached --quiet || git commit -m "Auto-update static files from config.json [no collection]"
           git push || true
 
       - name: Show generated files
         run: |
+          echo "=== Generated Files ==="
+          ls -lh sitemap.xml robots.txt data.json
+          echo ""
           echo "=== sitemap.xml ==="
           cat sitemap.xml
           echo ""
           echo "=== robots.txt ==="
           cat robots.txt
           echo ""
-          ls -lh sitemap.xml robots.txt
+          echo "=== data.json (first 20 lines) ==="
+          head -20 data.json
 
       - uses: actions/configure-pages@v4
       
