@@ -586,6 +586,75 @@ Crawl-delay: 1
             print(f"❌ 保存失败: {e}")
             return False
 
+    def regenerate_static_files(self):
+        print("\n" + "="*60)
+        print("🔄 重新生成所有静态文件")
+        print("="*60)
+        
+        print(f"\n📝 当前配置:")
+        print(f"   域名: {self.config.get('siteDomain', '未设置')}")
+        print(f"   协议: {self.config.get('settings', {}).get('protocol', 'https')}")
+        
+        results = []
+        
+        if self.output_file.exists():
+            try:
+                with open(self.output_file, 'r', encoding='utf-8') as f:
+                    existing_data = json.load(f)
+                
+                existing_data['siteDomain'] = self.get_base_url()
+                
+                ad_config = self.config.get('ad', {})
+                existing_data['ad'] = ad_config
+                
+                source_names_configured = [s['name'] for s in self.config.get('sources', [])]
+                existing_sources = existing_data.get('sources', {})
+                
+                removed_count = 0
+                for source_name in list(existing_sources.keys()):
+                    if source_name not in source_names_configured:
+                        del existing_sources[source_name]
+                        print(f"   🗑️ 已移除数据源: {source_name}")
+                        removed_count += 1
+                
+                existing_data['sourceNames'] = list(existing_sources.keys())
+                existing_data['stats'] = {
+                    'totalSources': len(existing_sources),
+                    'totalItems': sum(len(items) for items in existing_sources.values()),
+                    'sourceStats': {name: len(items) for name, items in existing_sources.items()}
+                }
+                
+                with open(self.output_file, 'w', encoding='utf-8') as f:
+                    json.dump(existing_data, f, ensure_ascii=False, indent=2)
+                
+                file_size = os.path.getsize(self.output_file)
+                print(f"\n✅ 数据文件已更新: {self.output_file}")
+                print(f"   文件大小: {file_size / 1024:.2f} KB")
+                if removed_count > 0:
+                    print(f"   清理了 {removed_count} 个无效数据源")
+                
+            except Exception as e:
+                print(f"⚠️  更新数据文件失败: {e}")
+        else:
+            print(f"\n⚠️  data.json不存在，跳过更新")
+        
+        sitemap_result = self.generate_sitemap({'siteDomain': self.get_base_url()})
+        results.append(sitemap_result)
+        
+        robots_result = self.generate_robots_txt()
+        results.append(robots_result)
+        
+        self._save_current_state()
+        
+        if all(results):
+            print("\n" + "="*60)
+            print("✨ 所有静态文件已成功生成！")
+            print("="*60)
+            return True
+        else:
+            print("\n⚠️  部分文件生成失败，请检查错误信息")
+            return False
+
     def run_once(self):
         data = self.collect_all_sources()
         results = []
@@ -636,6 +705,8 @@ def main():
     
     parser.add_argument('--once', action='store_true',
                         help='只运行一次采集')
+    parser.add_argument('--regenerate', action='store_true',
+                        help='只重新生成静态文件（sitemap.xml、robots.txt、data.json），不执行采集')
     parser.add_argument('-i', '--interval', type=int,
                         help='覆盖配置中的采集间隔时间（分钟）')
     parser.add_argument('-d', '--domain', type=str,
@@ -653,6 +724,10 @@ def main():
 
     collector = ContentCollector()
 
+    if args.regenerate:
+        collector.regenerate_static_files()
+        return
+
     if args.domain:
         collector.set_domain(args.domain)
 
@@ -662,10 +737,14 @@ def main():
     if args.add_source:
         name, url = args.add_source
         collector.add_source(name, url)
+        print("\n💡 提示：配置已更新，如需立即生成静态文件，请运行：")
+        print("   python collector.py --regenerate")
         return
     
     if args.remove_source:
         collector.remove_source(args.remove_source)
+        print("\n💡 提示：配置已更新，如需立即生成静态文件，请运行：")
+        print("   python collector.py --regenerate")
         return
     
     if args.list_sources:
