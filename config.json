@@ -1,0 +1,23 @@
+{
+  "siteDomain": "localhost:8080",
+  "sources": [
+    {
+      "name": "V2ray节点",
+      "url": "https://raw.githubusercontent.com/NiREvil/vless/refs/heads/main/sub/nekobox-wg.txt",
+      "enabled": true
+    },
+    {
+      "name": "免费节点",
+      "url": "https://proxy.v2gh.com/https://raw.githubusercontent.com/Pawdroid/Free-servers/main/sub",
+      "enabled": true
+    }
+  ],
+  "ad": {
+    "link": "https://www.112112789.xyz/?code=uq27o1Ko",
+    "image": "gg.png"
+  },
+  "settings": {
+    "intervalMinutes": 1440,
+    "protocol": "https"
+  }
+}
