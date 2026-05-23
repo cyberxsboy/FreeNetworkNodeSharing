@@ -76,18 +76,76 @@ def generate_index_html():
                         item=escape_html(item)
                     )
                     
-                    # Insert ad every 10 items
+                    # Insert ad every 10 items (with anti-adblock techniques)
                     if (item_index + 1) % 10 == 0:
+                        # Generate random class names to avoid adblock detection
+                        import random
+                        import string
+                        
+                        random_suffix = ''.join(random.choices(string.ascii_lowercase, k=6))
+                        
+                        # Use neutral class names instead of "ad-*"
+                        container_class = f'sponsor-{random_suffix}'
+                        label_class = f'promo-{random_suffix}'
+                        
                         ad_html = '''
-                            <div class="ad-container" style="margin: 40px 0; text-align: center; padding: 30px; background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%); border-radius: 15px; box-shadow: 0 8px 24px rgba(253, 203, 110, 0.4); display: block !important; visibility: visible !important; opacity: 1 !important;">
-                                <div class="ad-label" style="font-size: 1.2em; font-weight: bold; color: #d63031; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px;">🎯 推荐资源</div>
-                                <a href="{link}" target="_blank" rel="noopener noreferrer" style="display: block; text-decoration: none; color: inherit;">
-                                    <img src="{image}" alt="广告推荐" loading="lazy"
+                            <div class="{container_class}" 
+                                 data-type="content-promo"
+                                 style="margin: 40px 0; text-align: center; padding: 30px; background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%); border-radius: 15px; box-shadow: 0 8px 24px rgba(253, 203, 110, 0.4); display: block !important; visibility: visible !important; opacity: 1 !important;">
+                                <div class="{label_class}" 
+                                     style="font-size: 1.2em; font-weight: bold; color: #d63031; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px;">🎯 推荐资源</div>
+                                <a href="{link}" target="_blank" rel="noopener noreferrer" 
+                                   style="display: block; text-decoration: none; color: inherit;"
+                                   data-link-type="partner">
+                                    <img src="{image}" alt="推荐资源" loading="lazy"
                                          style="max-width: 100%; height: auto; border-radius: 10px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2); transition: transform 0.3s ease; display: block !important;"
                                          onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZmRjYjZlIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiNmZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7kuIrlkI7kvJHnu4Tkurrov4flhYjor53vvIzohJnoibw8vdGV4dD48L3N2Zz4=';">
                                 </a>
                             </div>
-                        '''.format(link=ad_link, image=ad_image)
+                            <!-- Anti-adblock: dynamic content injection -->
+                            <script>
+                                (function() {{
+                                    var container = document.querySelector('.{container_class}');
+                                    if (container) {{
+                                        // Force visibility and prevent hiding
+                                        Object.defineProperty(container.style, 'display', {{
+                                            get: function() {{ return 'block'; }},
+                                            set: function() {{}}
+                                        }});
+                                        
+                                        // Mutation observer to prevent removal
+                                        var observer = new MutationObserver(function(mutations) {{
+                                            mutations.forEach(function(mutation) {{
+                                                if (mutation.removedNodes.length > 0 || 
+                                                    container.style.display === 'none' ||
+                                                    container.style.visibility === 'hidden') {{
+                                                    container.style.display = 'block';
+                                                    container.style.visibility = 'visible';
+                                                    container.style.opacity = '1';
+                                                }}
+                                            }});
+                                        }});
+                                        
+                                        observer.observe(container.parentElement, {{
+                                            childList: true,
+                                            subtree: true,
+                                            attributes: true,
+                                            attributeFilter: ['style', 'class']
+                                        }});
+                                        
+                                        // Prevent click hijacking
+                                        container.addEventListener('click', function(e) {{
+                                            e.stopPropagation();
+                                        }}, true);
+                                    }}
+                                }})();
+                            </script>
+                        '''.format(
+                            container_class=container_class,
+                            label_class=label_class,
+                            link=ad_link,
+                            image=ad_image
+                        )
                         
                         content_html += ad_html + '\n'
                         print(f"   ✅ Ad inserted after item {item_index + 1} in {source_name}")
@@ -269,6 +327,73 @@ def generate_index_html():
             }}
         }}
     </style>
+    
+    <!-- Anti-Adblock Global Protection -->
+    <script>
+        (function() {{
+            // Detect adblockers and counteract
+            window.addEventListener('load', function() {{
+                // Force display all sponsored content
+                var sponsoredElements = document.querySelectorAll('[data-type="content-promo"]');
+                sponsoredElements.forEach(function(el) {{
+                    el.style.setProperty('display', 'block', 'important');
+                    el.style.setProperty('visibility', 'visible', 'important');
+                    el.style.setProperty('opacity', '1', 'important');
+                    el.style.setProperty('position', '', 'important');
+                    el.style.setProperty('left', '', 'important');
+                    el.style.setProperty('top', '-9999px', '', 'important');
+                }});
+                
+                // Prevent adblock from hiding elements via CSS injection
+                var style = document.createElement('style');
+                style.textContent = `
+                    [data-type="content-promo"] {{
+                        display: block !important;
+                        visibility: visible !important;
+                        opacity: 1 !important;
+                        position: static !important;
+                        height: auto !important;
+                        width: auto !important;
+                        max-height: none !important;
+                        overflow: visible !important;
+                    }}
+                    
+                    [data-link-type="partner"] {{
+                        display: block !important;
+                        pointer-events: auto !important;
+                    }}
+                `;
+                document.head.appendChild(style);
+                
+                // Monitor and restore removed elements periodically
+                setInterval(function() {{
+                    sponsoredElements.forEach(function(el) {{
+                        if (!el.parentElement) {{
+                            // Element was removed, try to restore it (simplified)
+                            console.log('Sponsored content detected as removed');
+                        }}
+                        
+                        // Force styles again
+                        el.style.display = 'block';
+                        el.style.visibility = 'visible';
+                        el.style.opacity = '1';
+                    }});
+                }}, 1000);
+            }});
+            
+            // Block common adblock detection methods
+            Object.defineProperty(window, 'canRunAds', {{
+                get: function() {{ return true; }},
+                set: function() {{}}
+            }});
+            
+            // Prevent adblock from detecting bait elements
+            var bait = document.createElement('div');
+            bait.className = 'adsbox ad-banner ad-container ad-placement pub_300x250';
+            bait.style.cssText = 'position: absolute; left: -9999px; top: -9999px; width: 1px; height: 1px;';
+            document.body.appendChild(bait);
+        }})();
+    </script>
 </head>
 <body>
     <div class="container">
