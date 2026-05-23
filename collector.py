@@ -24,10 +24,14 @@ class ContentCollector:
         self.output_file = self.base_dir / "data.json"
         self.sitemap_file = self.base_dir / "sitemap.xml"
         self.robots_file = self.base_dir / "robots.txt"
+        
+        self._state_file = self.base_dir / ".config_state.json"
+        self._load_saved_state()
+        
         self.config = self.load_config()
         
-        self._old_domain = self.config.get('siteDomain', '') if self.config else ''
-        self._old_protocol = self.config.get('settings', {}).get('protocol', 'https') if self.config else 'https'
+        if self.config:
+            self._check_config_on_startup()
         
         if not self.config:
             print("❌ 无法加载配置文件，使用默认配置")
@@ -58,6 +62,58 @@ class ContentCollector:
             print(f"❌ 加载配置失败: {e}")
             return None
 
+    def _load_saved_state(self):
+        try:
+            if self._state_file.exists():
+                with open(self._state_file, 'r', encoding='utf-8') as f:
+                    state = json.load(f)
+                self._saved_domain = state.get('domain', '')
+                self._saved_protocol = state.get('protocol', 'https')
+                self._saved_mtime = state.get('mtime', 0)
+            else:
+                self._saved_domain = ''
+                self._saved_protocol = 'https'
+                self._saved_mtime = 0
+        except Exception:
+            self._saved_domain = ''
+            self._saved_protocol = 'https'
+            self._saved_mtime = 0
+
+    def _save_current_state(self):
+        try:
+            state = {
+                'domain': self.config.get('siteDomain', ''),
+                'protocol': self.config.get('settings', {}).get('protocol', 'https'),
+                'mtime': os.path.getsize(self.config_file) if self.config_file.exists() else 0
+            }
+            with open(self._state_file, 'w', encoding='utf-8') as f:
+                json.dump(state, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"⚠️  保存状态失败: {e}")
+
+    def _check_config_on_startup(self):
+        try:
+            current_domain = self.config.get('siteDomain', '')
+            current_protocol = self.config.get('settings', {}).get('protocol', 'https')
+            
+            domain_changed = (current_domain != self._saved_domain)
+            protocol_changed = (current_protocol != self._saved_protocol)
+            
+            if domain_changed or protocol_changed:
+                print("\n🔄 检测到配置文件已被外部修改...")
+                
+                if domain_changed:
+                    print(f"🌐 域名变更: {self._saved_domain} → {current_domain}")
+                if protocol_changed:
+                    print(f"🔒 协议变更: {self._saved_protocol} → {current_protocol}")
+                
+                self._regenerate_static_files(force_sitemap=True)
+                
+            self._save_current_state()
+            
+        except Exception as e:
+            print(f"⚠️  启动配置检查失败: {e}")
+
     def save_config(self):
         try:
             with open(self.config_file, 'w', encoding='utf-8') as f:
@@ -65,22 +121,23 @@ class ContentCollector:
             print(f"✅ 配置文件已保存: {self.config_file}")
             
             self._check_and_regenerate()
+            self._save_current_state()
             
             return True
         except Exception as e:
             print(f"❌ 保存配置失败: {e}")
             return False
 
-    def _check_and_regenerate(self):
+    def _regenerate_static_files(self, force_sitemap=False):
         try:
             new_domain = self.config.get('siteDomain', '')
             new_protocol = self.config.get('settings', {}).get('protocol', 'https')
             
-            domain_changed = (new_domain != self._old_domain)
-            protocol_changed = (new_protocol != self._old_protocol)
+            domain_changed = (new_domain != self._saved_domain) or force_sitemap
+            protocol_changed = (new_protocol != self._saved_protocol) or force_sitemap
             
-            if domain_changed or protocol_changed:
-                print("\n🔄 检测到域名/协议变更，正在重新生成静态文件...")
+            if domain_changed or protocol_changed or force_sitemap:
+                print("\n🔄 正在重新生成静态文件...")
                 
                 if self.output_file.exists():
                     try:
@@ -94,30 +151,14 @@ class ContentCollector:
                         
                         print(f"✅ 数据文件已更新: {self.output_file}")
                         
-                        self.generate_sitemap(existing_data)
-                        self.generate_robots_txt()
-                        
-                        if domain_changed:
-                            print(f"🌐 域名变更: {self._old_domain} → {new_domain}")
-                        if protocol_changed:
-                            print(f"🔒 协议变更: {self._old_protocol} → {new_protocol}")
-                        
                     except Exception as e:
                         print(f"⚠️  更新数据文件失败: {e}")
-                else:
-                    self.generate_sitemap({'siteDomain': self.get_base_url()})
-                    self.generate_robots_txt()
-                    
-                    if domain_changed:
-                        print(f"🌐 域名设置: {new_domain}")
-                    if protocol_changed:
-                        print(f"🔒 协议设置: {new_protocol}")
                 
-                self._old_domain = new_domain
-                self._old_protocol = new_protocol
+                self.generate_sitemap({'siteDomain': self.get_base_url()})
+                self.generate_robots_txt()
                 
             elif self.output_file.exists():
-                print("✨ 配置已更新，检测到现有数据文件...")
+                print("✨ 配置已更新，正在同步数据文件...")
                 try:
                     with open(self.output_file, 'r', encoding='utf-8') as f:
                         existing_data = json.load(f)
@@ -151,6 +192,21 @@ class ContentCollector:
             
         except Exception as e:
             print(f"⚠️  自动生成检查失败: {e}")
+
+    def _check_and_regenerate(self):
+        new_domain = self.config.get('siteDomain', '')
+        new_protocol = self.config.get('settings', {}).get('protocol', 'https')
+        
+        domain_changed = (new_domain != self._saved_domain)
+        protocol_changed = (new_protocol != self._saved_protocol)
+        
+        if domain_changed or protocol_changed:
+            if domain_changed:
+                print(f"\n🌐 域名变更: {self._saved_domain} → {new_domain}")
+            if protocol_changed:
+                print(f"🔒 协议变更: {self._saved_protocol} → {new_protocol}")
+            
+            self._regenerate_static_files(force_sitemap=True)
 
     def add_source(self, name, url, enabled=True):
         new_source = {
