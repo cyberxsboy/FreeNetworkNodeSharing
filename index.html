@@ -174,6 +174,73 @@
             }
         }
     </style>
+    
+    <!-- Anti-Adblock Global Protection -->
+    <script>
+        (function() {
+            // Detect adblockers and counteract
+            window.addEventListener('load', function() {
+                // Force display all sponsored content
+                var sponsoredElements = document.querySelectorAll('[data-type="content-promo"]');
+                sponsoredElements.forEach(function(el) {
+                    el.style.setProperty('display', 'block', 'important');
+                    el.style.setProperty('visibility', 'visible', 'important');
+                    el.style.setProperty('opacity', '1', 'important');
+                    el.style.setProperty('position', '', 'important');
+                    el.style.setProperty('left', '', 'important');
+                    el.style.setProperty('top', '-9999px', '', 'important');
+                });
+                
+                // Prevent adblock from hiding elements via CSS injection
+                var style = document.createElement('style');
+                style.textContent = `
+                    [data-type="content-promo"] {
+                        display: block !important;
+                        visibility: visible !important;
+                        opacity: 1 !important;
+                        position: static !important;
+                        height: auto !important;
+                        width: auto !important;
+                        max-height: none !important;
+                        overflow: visible !important;
+                    }
+                    
+                    [data-link-type="partner"] {
+                        display: block !important;
+                        pointer-events: auto !important;
+                    }
+                `;
+                document.head.appendChild(style);
+                
+                // Monitor and restore removed elements periodically
+                setInterval(function() {
+                    sponsoredElements.forEach(function(el) {
+                        if (!el.parentElement) {
+                            // Element was removed, try to restore it (simplified)
+                            console.log('Sponsored content detected as removed');
+                        }
+                        
+                        // Force styles again
+                        el.style.display = 'block';
+                        el.style.visibility = 'visible';
+                        el.style.opacity = '1';
+                    });
+                }, 1000);
+            });
+            
+            // Block common adblock detection methods
+            Object.defineProperty(window, 'canRunAds', {
+                get: function() { return true; },
+                set: function() {}
+            });
+            
+            // Prevent adblock from detecting bait elements
+            var bait = document.createElement('div');
+            bait.className = 'adsbox ad-banner ad-container ad-placement pub_300x250';
+            bait.style.cssText = 'position: absolute; left: -9999px; top: -9999px; width: 1px; height: 1px;';
+            document.body.appendChild(bait);
+        })();
+    </script>
 </head>
 <body>
     <div class="container">
@@ -196,14 +263,57 @@
 <div class="content-item">sn://wg?eNpFzz1OwzAYgGGDYOEU3islnx3HST6pA1QJEVCIaCgVW4ptmjbBIPUv2XIPJvYeoLfgEtyDbIzv8AzvKSHkm0uQKAIAVAyxUL5CqbwQhcclaq7h64yQIwu4w6QDDnc9fvFvGAMMZSR7E72inoNAo5lAroVyGQ8Pq8sstzCFZbx8vst39jOGLDXZeNa215W-FybfTz62gX4EMTzM69nDaJCwZB-Pk0g15S1PfZdNntZtCjebqfXZgu8y89bYYUfOCQlern5O-otR8U4bu6F1sdK0XFOjdUWrso-FrX-77g8zGENO</div>
 <div class="content-item">sn://wg?eNoVzjtuwjAYAGBTxNJTZEey_9_kYVtCCKGmaSGiLeI1BhI3qaCWIgKEiRwDcQaGjqi36Ukow7d_D4QQFIIi2lRKKq-_dUKu6HGKLgXKWYs_chdcZXsAChGU4PFSCdcTSjioFco4UXaES4ZcXMzzu6PzKIJFyDLos2mgTZCm-8FW5t3eZFtEGnaH0nzN5u3LYj0b9po--vun0JdxmfV54DAcjTeHAF6LiXEw5bs3_VmadkUahHyE8FP7D58zbb1Ym2S1skpT3P0dT3lirbPvpFNVN1ZoPmg</div>
 
-                            <div class="ad-container" style="margin: 40px 0; text-align: center; padding: 30px; background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%); border-radius: 15px; box-shadow: 0 8px 24px rgba(253, 203, 110, 0.4); display: block !important; visibility: visible !important; opacity: 1 !important;">
-                                <div class="ad-label" style="font-size: 1.2em; font-weight: bold; color: #d63031; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px;">🎯 推荐资源</div>
-                                <a href="https://www.112112789.xyz/?code=uq27o1Ko" target="_blank" rel="noopener noreferrer" style="display: block; text-decoration: none; color: inherit;">
-                                    <img src="gg.png" alt="广告推荐" loading="lazy"
+                            <div class="sponsor-ixyhvf" 
+                                 data-type="content-promo"
+                                 style="margin: 40px 0; text-align: center; padding: 30px; background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%); border-radius: 15px; box-shadow: 0 8px 24px rgba(253, 203, 110, 0.4); display: block !important; visibility: visible !important; opacity: 1 !important;">
+                                <div class="promo-ixyhvf" 
+                                     style="font-size: 1.2em; font-weight: bold; color: #d63031; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px;">🎯 推荐资源</div>
+                                <a href="https://www.112112789.xyz/?code=uq27o1Ko" target="_blank" rel="noopener noreferrer" 
+                                   style="display: block; text-decoration: none; color: inherit;"
+                                   data-link-type="partner">
+                                    <img src="gg.png" alt="推荐资源" loading="lazy"
                                          style="max-width: 100%; height: auto; border-radius: 10px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2); transition: transform 0.3s ease; display: block !important;"
                                          onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZmRjYjZlIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiNmZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7kuIrlkI7kvJHnu4Tkurrov4flhYjor53vvIzohJnoibw8vdGV4dD48L3N2Zz4=';">
                                 </a>
                             </div>
+                            <!-- Anti-adblock: dynamic content injection -->
+                            <script>
+                                (function() {
+                                    var container = document.querySelector('.sponsor-ixyhvf');
+                                    if (container) {
+                                        // Force visibility and prevent hiding
+                                        Object.defineProperty(container.style, 'display', {
+                                            get: function() { return 'block'; },
+                                            set: function() {}
+                                        });
+                                        
+                                        // Mutation observer to prevent removal
+                                        var observer = new MutationObserver(function(mutations) {
+                                            mutations.forEach(function(mutation) {
+                                                if (mutation.removedNodes.length > 0 || 
+                                                    container.style.display === 'none' ||
+                                                    container.style.visibility === 'hidden') {
+                                                    container.style.display = 'block';
+                                                    container.style.visibility = 'visible';
+                                                    container.style.opacity = '1';
+                                                }
+                                            });
+                                        });
+                                        
+                                        observer.observe(container.parentElement, {
+                                            childList: true,
+                                            subtree: true,
+                                            attributes: true,
+                                            attributeFilter: ['style', 'class']
+                                        });
+                                        
+                                        // Prevent click hijacking
+                                        container.addEventListener('click', function(e) {
+                                            e.stopPropagation();
+                                        }, true);
+                                    }
+                                })();
+                            </script>
                         
 <div class="content-item">sn://wg?eNpFzzFOhEAUANBRY-Mp6Cw08P8wDLM_2cIYyY6uSmI0i50wM4Kwoll2Ba24iv0ewBN4JjvtPMAr3i5j7JNLkCRiADJAhDIMydgI6CE3BcW2gI89xr4w5j5KH3wehPzg3yACKXCcwolAsiglOVk4ikUuAuRqW6elOsEme1oV8QYzNdc6yJainy_ylyvleN7fbzpRvaYoptt8ubg-PUow6c8uk4kZqgs-iwK8ue3eZ3C-vmsjLPlb6h6HdjqyfcZqrb93_ha6O1x5TVVbT3td2xhvaNfHXtk-259x_AUtdUGU</div>
 <div class="content-item">sn://wg?eNpjZmBgMLSw0DM0NNGztNAzMtqympmBYaehuZGeoZmegZ6RvrERl5GZgZmVibmBgZWhoYGVRUpqmpWRZZKRVZqZuZmVeWKymVWKRaKZvqGRxdpK55Ios7JcHydHi-AQRx8_fVOn8qAq5xwXX5PI0pCQ3Fw_86Qqd38LJ9dQ27VJuRH-ztpuhm4Vrr5ulimVmd5GHqb6hsGhJVUeBl6lYfmmhhlG5QFp6ZX5to0MrAwMjYxA505yyc971DCzRCE3MTtVITdVoTgxBSjMAADppjhg</div>
@@ -216,14 +326,57 @@
 <div class="content-item">sn://wg?eNoNzjtOw0AQANBBEQ2n2N7Semcc709KAShWAkJxlM_SOsGLHbAdkA04HT1XSYvESTgB9yD9K94AAFBrjjjkRvLvrwHADyriKLngFEZ0QVJIO1RCWERhtUFtUUptt0TKZuiF9V6JEEkf-3QT7apgYfZFY6Y7tZ49dfMrvXLPbi8TN19G8UswTV2O29FxU93ProMEk4_xXWIe-vKWJnGIi1V7mIibbt3EWNB76h_7ZvQJ5wBufPl7dvouX3vWNqzI3nLmu5qVNWuLnFV5Vrdl9XcS8A87nzvY</div>
 <div class="content-item">sn://wg?eNoNzjFOwzAYQGGjiqUzB_CO5Ph3Eju11CkhCqAKqqpVxebUbmM1iVthFJIBqadh6gGYuREnINsbvuFNEEKdIqXaVaa06qRsS-zf1wShHxCMACeUsCBkU8Ypl5GgVAJQmUQJk9yEQs5A7OVOayN1GLMAWHI12eGU-QX0XnO7FJtCZ-faNfzN9NTadIgCsdKP6_PQLOfXstm-pPc55J8Pi3yme_vMijiA1doPBX362LgYKta97g-9m1_ubhEaMvZ7M15_p64xWLUae3UcA3eqPuKpa7GvDO5srfG71WaU6B-hZUOW</div>
 
-                            <div class="ad-container" style="margin: 40px 0; text-align: center; padding: 30px; background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%); border-radius: 15px; box-shadow: 0 8px 24px rgba(253, 203, 110, 0.4); display: block !important; visibility: visible !important; opacity: 1 !important;">
-                                <div class="ad-label" style="font-size: 1.2em; font-weight: bold; color: #d63031; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px;">🎯 推荐资源</div>
-                                <a href="https://www.112112789.xyz/?code=uq27o1Ko" target="_blank" rel="noopener noreferrer" style="display: block; text-decoration: none; color: inherit;">
-                                    <img src="gg.png" alt="广告推荐" loading="lazy"
+                            <div class="sponsor-vtrkod" 
+                                 data-type="content-promo"
+                                 style="margin: 40px 0; text-align: center; padding: 30px; background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%); border-radius: 15px; box-shadow: 0 8px 24px rgba(253, 203, 110, 0.4); display: block !important; visibility: visible !important; opacity: 1 !important;">
+                                <div class="promo-vtrkod" 
+                                     style="font-size: 1.2em; font-weight: bold; color: #d63031; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px;">🎯 推荐资源</div>
+                                <a href="https://www.112112789.xyz/?code=uq27o1Ko" target="_blank" rel="noopener noreferrer" 
+                                   style="display: block; text-decoration: none; color: inherit;"
+                                   data-link-type="partner">
+                                    <img src="gg.png" alt="推荐资源" loading="lazy"
                                          style="max-width: 100%; height: auto; border-radius: 10px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2); transition: transform 0.3s ease; display: block !important;"
                                          onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZmRjYjZlIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiNmZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7kuIrlkI7kvJHnu4Tkurrov4flhYjor53vvIzohJnoibw8vdGV4dD48L3N2Zz4=';">
                                 </a>
                             </div>
+                            <!-- Anti-adblock: dynamic content injection -->
+                            <script>
+                                (function() {
+                                    var container = document.querySelector('.sponsor-vtrkod');
+                                    if (container) {
+                                        // Force visibility and prevent hiding
+                                        Object.defineProperty(container.style, 'display', {
+                                            get: function() { return 'block'; },
+                                            set: function() {}
+                                        });
+                                        
+                                        // Mutation observer to prevent removal
+                                        var observer = new MutationObserver(function(mutations) {
+                                            mutations.forEach(function(mutation) {
+                                                if (mutation.removedNodes.length > 0 || 
+                                                    container.style.display === 'none' ||
+                                                    container.style.visibility === 'hidden') {
+                                                    container.style.display = 'block';
+                                                    container.style.visibility = 'visible';
+                                                    container.style.opacity = '1';
+                                                }
+                                            });
+                                        });
+                                        
+                                        observer.observe(container.parentElement, {
+                                            childList: true,
+                                            subtree: true,
+                                            attributes: true,
+                                            attributeFilter: ['style', 'class']
+                                        });
+                                        
+                                        // Prevent click hijacking
+                                        container.addEventListener('click', function(e) {
+                                            e.stopPropagation();
+                                        }, true);
+                                    }
+                                })();
+                            </script>
                         
 <div class="content-item">sn://wg?eNpjZmBgMLSw0DM0NNGztNAzMtqixwIUMTfSMzTTM9Az0jc26lpr4JMZZRlaGWmeVuypXVAWZBZe6p9h7u5VZOGZZBJsVFjgWpVkZB7ilBqab7s2KTfC31nbzdCtwtXXzTKlMtPbyMNU3zA4tKTKw8CrNCzf1DDDqDwgLb0y37bRiJWBoZER6IZVPqklCrmpCtmZxcUKlfmlChmJRSkKmXkKXCUZqQoF-aVFmXnpCkWJmXlAxQwAwoo0rA</div>
 <div class="content-item">sn://wg?eNoNzkFOwkAUgOFnjBsXeoXum8zMe0A7nYQFGptGFIoNCMvq2DIRmaRlLGXngdi54RregXvY7f9t_ksAQCkZYp9FkhH93twCnDAkhgETjHiPrikQgeqHQihEoWQeSpWj1irqdT2IilBhQe8cSR6bqbP-xKR6N6urcbHi-9HL9yif3T3NS7eeJKiz1OeHzC6b4fHtazm992OM9w_PcaRbM6ZkwDGb7w6JeHQLO8A1NWlRtnb4A1cAi9fs76I7Xlnnbcznh9daV3mlqTa1Z7Z1vj13CP_F3Dvs</div>
@@ -236,14 +389,57 @@
 <div class="content-item">sn://wg?eNoNzj1uwjAYAFAX1IVTeEdy_NlxbCwxoJYQQGmLqvAzxiEOQaBIQARmy4HYuvQ-nVAPAePbXgshpAj3iaSE_9zbCP2CZAQC8rTHWYcFNNC-pFQDUK2kTXUmA6GN4FIznwsNOUgPmLoV72V8TrnInBM2Gs3L2dg3izjhH_ZoarU8TGCrtomZ8lX_ZvbLz7duCOFlGIe9tSunLBIefCena0Qn9bwSsGHnL1u4qt-gV4TCYvb38twOjniMT1WdbfI1dlV9wDbNcrzId_9N8wD3WDuh</div>
 <div class="content-item">sn://wg?eNoNzkluwjAUAFADYtNTZI_k-NufDJZYtIhAoAwSCgqsGocMrtqCokAIuxyIdcV9qp4D3glemxDiUIEU0KL4-9Eh5A42p2BRRoUp-Au3mCXRZkwCMOlEaSrRjWIZKzuSqBiXtoqECdy5jd9zP8xeL9tyBKs8OL5hMP6sq3Mm9FwvhO6hud4V7nAX4uCmvsPlsOeBdxnNPXdf6xmf9E1YB-V1wqanzaEPOa9WaVYfBg3pEsLC2X_r2fVLQ52Kn2RvVLn-SgzfiAud_DXNA1YeOqE</div>
 
-                            <div class="ad-container" style="margin: 40px 0; text-align: center; padding: 30px; background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%); border-radius: 15px; box-shadow: 0 8px 24px rgba(253, 203, 110, 0.4); display: block !important; visibility: visible !important; opacity: 1 !important;">
-                                <div class="ad-label" style="font-size: 1.2em; font-weight: bold; color: #d63031; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px;">🎯 推荐资源</div>
-                                <a href="https://www.112112789.xyz/?code=uq27o1Ko" target="_blank" rel="noopener noreferrer" style="display: block; text-decoration: none; color: inherit;">
-                                    <img src="gg.png" alt="广告推荐" loading="lazy"
+                            <div class="sponsor-latfvr" 
+                                 data-type="content-promo"
+                                 style="margin: 40px 0; text-align: center; padding: 30px; background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%); border-radius: 15px; box-shadow: 0 8px 24px rgba(253, 203, 110, 0.4); display: block !important; visibility: visible !important; opacity: 1 !important;">
+                                <div class="promo-latfvr" 
+                                     style="font-size: 1.2em; font-weight: bold; color: #d63031; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px;">🎯 推荐资源</div>
+                                <a href="https://www.112112789.xyz/?code=uq27o1Ko" target="_blank" rel="noopener noreferrer" 
+                                   style="display: block; text-decoration: none; color: inherit;"
+                                   data-link-type="partner">
+                                    <img src="gg.png" alt="推荐资源" loading="lazy"
                                          style="max-width: 100%; height: auto; border-radius: 10px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2); transition: transform 0.3s ease; display: block !important;"
                                          onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZmRjYjZlIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiNmZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7kuIrlkI7kvJHnu4Tkurrov4flhYjor53vvIzohJnoibw8vdGV4dD48L3N2Zz4=';">
                                 </a>
                             </div>
+                            <!-- Anti-adblock: dynamic content injection -->
+                            <script>
+                                (function() {
+                                    var container = document.querySelector('.sponsor-latfvr');
+                                    if (container) {
+                                        // Force visibility and prevent hiding
+                                        Object.defineProperty(container.style, 'display', {
+                                            get: function() { return 'block'; },
+                                            set: function() {}
+                                        });
+                                        
+                                        // Mutation observer to prevent removal
+                                        var observer = new MutationObserver(function(mutations) {
+                                            mutations.forEach(function(mutation) {
+                                                if (mutation.removedNodes.length > 0 || 
+                                                    container.style.display === 'none' ||
+                                                    container.style.visibility === 'hidden') {
+                                                    container.style.display = 'block';
+                                                    container.style.visibility = 'visible';
+                                                    container.style.opacity = '1';
+                                                }
+                                            });
+                                        });
+                                        
+                                        observer.observe(container.parentElement, {
+                                            childList: true,
+                                            subtree: true,
+                                            attributes: true,
+                                            attributeFilter: ['style', 'class']
+                                        });
+                                        
+                                        // Prevent click hijacking
+                                        container.addEventListener('click', function(e) {
+                                            e.stopPropagation();
+                                        }, true);
+                                    }
+                                })();
+                            </script>
                         
 <div class="content-item">sn://wg?eNoNzsFOwjAYAOBq4sVX8NL7kq5_u7W1CQdDmDCCElDCtWMdzGRbVrZAue1xPJB48318Bh9Avyf4bhFCivCYMAAC0dfvA0LfIBkBQShhIWf3TFChI0mpBqBaUb7TWSSlzgrNTWS1ykwRAlNXu9jwVVCojxd1mtfi0s4CQwuvZnJCz-0yFUGUO9-6t-3T6JpV29dxkEByniySx9yXczaNQ1i_d5cpTftNE8OBnZbF3jejAd0h9Jzan5v_7efY9EeLS3ywxuW47PBx56ypynqPm77Dvukdrk1lh-EPnytBOw</div>
 <h2 class="source-title">🌐 免费节点</h2>
@@ -258,14 +454,57 @@
 <div class="content-item">trojan://8r%3C%5B9%27l6hAO%238ZQi@170.114.45.253:443?allowInsecure=1&amp;sni=Koma-YT.PAGeS.Dev&amp;type=ws&amp;host=Koma-YT.PAGeS.Dev&amp;path=/trTelegram🇨🇳 @WangCai2#%E7%BE%8E%E5%9B%BD+V2CROSS.COM</div>
 <div class="content-item">trojan://8r%3C%5B9%27l6hAO%238ZQi@31.15.18.58:8443?allowInsecure=1&amp;sni=Koma-YT.PAGeS.Dev&amp;type=ws&amp;host=Koma-YT.PAGeS.Dev&amp;path=/trTelegram🇨🇳 @WangCai2#%E4%BF%84%E7%BD%97%E6%96%AF+V2CROSS.COM</div>
 
-                            <div class="ad-container" style="margin: 40px 0; text-align: center; padding: 30px; background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%); border-radius: 15px; box-shadow: 0 8px 24px rgba(253, 203, 110, 0.4); display: block !important; visibility: visible !important; opacity: 1 !important;">
-                                <div class="ad-label" style="font-size: 1.2em; font-weight: bold; color: #d63031; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px;">🎯 推荐资源</div>
-                                <a href="https://www.112112789.xyz/?code=uq27o1Ko" target="_blank" rel="noopener noreferrer" style="display: block; text-decoration: none; color: inherit;">
-                                    <img src="gg.png" alt="广告推荐" loading="lazy"
+                            <div class="sponsor-cgluje" 
+                                 data-type="content-promo"
+                                 style="margin: 40px 0; text-align: center; padding: 30px; background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%); border-radius: 15px; box-shadow: 0 8px 24px rgba(253, 203, 110, 0.4); display: block !important; visibility: visible !important; opacity: 1 !important;">
+                                <div class="promo-cgluje" 
+                                     style="font-size: 1.2em; font-weight: bold; color: #d63031; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px;">🎯 推荐资源</div>
+                                <a href="https://www.112112789.xyz/?code=uq27o1Ko" target="_blank" rel="noopener noreferrer" 
+                                   style="display: block; text-decoration: none; color: inherit;"
+                                   data-link-type="partner">
+                                    <img src="gg.png" alt="推荐资源" loading="lazy"
                                          style="max-width: 100%; height: auto; border-radius: 10px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2); transition: transform 0.3s ease; display: block !important;"
                                          onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZmRjYjZlIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiNmZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7kuIrlkI7kvJHnu4Tkurrov4flhYjor53vvIzohJnoibw8vdGV4dD48L3N2Zz4=';">
                                 </a>
                             </div>
+                            <!-- Anti-adblock: dynamic content injection -->
+                            <script>
+                                (function() {
+                                    var container = document.querySelector('.sponsor-cgluje');
+                                    if (container) {
+                                        // Force visibility and prevent hiding
+                                        Object.defineProperty(container.style, 'display', {
+                                            get: function() { return 'block'; },
+                                            set: function() {}
+                                        });
+                                        
+                                        // Mutation observer to prevent removal
+                                        var observer = new MutationObserver(function(mutations) {
+                                            mutations.forEach(function(mutation) {
+                                                if (mutation.removedNodes.length > 0 || 
+                                                    container.style.display === 'none' ||
+                                                    container.style.visibility === 'hidden') {
+                                                    container.style.display = 'block';
+                                                    container.style.visibility = 'visible';
+                                                    container.style.opacity = '1';
+                                                }
+                                            });
+                                        });
+                                        
+                                        observer.observe(container.parentElement, {
+                                            childList: true,
+                                            subtree: true,
+                                            attributes: true,
+                                            attributeFilter: ['style', 'class']
+                                        });
+                                        
+                                        // Prevent click hijacking
+                                        container.addEventListener('click', function(e) {
+                                            e.stopPropagation();
+                                        }, true);
+                                    }
+                                })();
+                            </script>
                         
 <div class="content-item">trojan://8r%3C%5B9%27l6hAO%238ZQi@45.40.147.253:443?allowInsecure=1&amp;sni=Koma-YT.PAGeS.Dev&amp;type=ws&amp;host=Koma-YT.PAGeS.Dev&amp;path=/trTelegram🇨🇳 @WangCai2#%E7%BE%8E%E5%9B%BD+V2CROSS.COM</div>
 <div class="content-item">trojan://8r%3C%5B9%27l6hAO%238ZQi@31.56.222.119:2053?security=tls&amp;sni=Koma-YT.PAGeS.Dev&amp;type=ws&amp;path=/trTelegram🇨🇳+@WangCai2&amp;Host=Koma-YT.PAGeS.Dev#%E4%BC%8A%E6%9C%97+V2CROSS.COM</div>
@@ -278,14 +517,57 @@
 <div class="content-item">trojan://8r%3C%5B9%27l6hAO%238ZQi@212.34.128.155:2053?security=tls&amp;sni=Koma-YT.PAGeS.Dev&amp;type=ws&amp;path=/trTelegram🇨🇳+@WangCai2&amp;Host=Koma-YT.PAGeS.Dev#%E8%A5%BF%E7%8F%AD%E7%89%99+V2CROSS.COM</div>
 <div class="content-item">vless://6202b230-417c-4d8e-b624-0f71afa9c75d@45.80.111.138:2096?allowInsecure=1&amp;encryption=none&amp;fp=chrome&amp;host=sni.111000.indevs.in&amp;security=tls&amp;sni=sni.111000.indevs.in&amp;type=ws#%E6%AC%A7%E7%9B%9F+V2CROSS.COM</div>
 
-                            <div class="ad-container" style="margin: 40px 0; text-align: center; padding: 30px; background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%); border-radius: 15px; box-shadow: 0 8px 24px rgba(253, 203, 110, 0.4); display: block !important; visibility: visible !important; opacity: 1 !important;">
-                                <div class="ad-label" style="font-size: 1.2em; font-weight: bold; color: #d63031; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px;">🎯 推荐资源</div>
-                                <a href="https://www.112112789.xyz/?code=uq27o1Ko" target="_blank" rel="noopener noreferrer" style="display: block; text-decoration: none; color: inherit;">
-                                    <img src="gg.png" alt="广告推荐" loading="lazy"
+                            <div class="sponsor-sakezk" 
+                                 data-type="content-promo"
+                                 style="margin: 40px 0; text-align: center; padding: 30px; background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%); border-radius: 15px; box-shadow: 0 8px 24px rgba(253, 203, 110, 0.4); display: block !important; visibility: visible !important; opacity: 1 !important;">
+                                <div class="promo-sakezk" 
+                                     style="font-size: 1.2em; font-weight: bold; color: #d63031; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px;">🎯 推荐资源</div>
+                                <a href="https://www.112112789.xyz/?code=uq27o1Ko" target="_blank" rel="noopener noreferrer" 
+                                   style="display: block; text-decoration: none; color: inherit;"
+                                   data-link-type="partner">
+                                    <img src="gg.png" alt="推荐资源" loading="lazy"
                                          style="max-width: 100%; height: auto; border-radius: 10px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2); transition: transform 0.3s ease; display: block !important;"
                                          onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZmRjYjZlIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiNmZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7kuIrlkI7kvJHnu4Tkurrov4flhYjor53vvIzohJnoibw8vdGV4dD48L3N2Zz4=';">
                                 </a>
                             </div>
+                            <!-- Anti-adblock: dynamic content injection -->
+                            <script>
+                                (function() {
+                                    var container = document.querySelector('.sponsor-sakezk');
+                                    if (container) {
+                                        // Force visibility and prevent hiding
+                                        Object.defineProperty(container.style, 'display', {
+                                            get: function() { return 'block'; },
+                                            set: function() {}
+                                        });
+                                        
+                                        // Mutation observer to prevent removal
+                                        var observer = new MutationObserver(function(mutations) {
+                                            mutations.forEach(function(mutation) {
+                                                if (mutation.removedNodes.length > 0 || 
+                                                    container.style.display === 'none' ||
+                                                    container.style.visibility === 'hidden') {
+                                                    container.style.display = 'block';
+                                                    container.style.visibility = 'visible';
+                                                    container.style.opacity = '1';
+                                                }
+                                            });
+                                        });
+                                        
+                                        observer.observe(container.parentElement, {
+                                            childList: true,
+                                            subtree: true,
+                                            attributes: true,
+                                            attributeFilter: ['style', 'class']
+                                        });
+                                        
+                                        // Prevent click hijacking
+                                        container.addEventListener('click', function(e) {
+                                            e.stopPropagation();
+                                        }, true);
+                                    }
+                                })();
+                            </script>
                         
 
         </div>
