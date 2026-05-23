@@ -24,7 +24,7 @@ Disallow: /*collector*
 Disallow: /*config*
 
 # Sitemap位置
-Sitemap: https://localhost:8080/sitemap.xml
+Sitemap: https://v2ray.nrcs.qzz.io/sitemap.xml
 
 # Crawl-delay建议（秒）
 Crawl-delay: 1
