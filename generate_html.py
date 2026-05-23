@@ -79,10 +79,11 @@ def generate_index_html():
                     # Insert ad every 10 items
                     if (item_index + 1) % 10 == 0:
                         ad_html = '''
-                            <div class="ad-container">
-                                <div class="ad-label">🎯 推荐资源</div>
-                                <a href="{link}" target="_blank" rel="noopener noreferrer">
+                            <div class="ad-container" style="margin: 40px 0; text-align: center; padding: 30px; background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%); border-radius: 15px; box-shadow: 0 8px 24px rgba(253, 203, 110, 0.4); display: block !important; visibility: visible !important; opacity: 1 !important;">
+                                <div class="ad-label" style="font-size: 1.2em; font-weight: bold; color: #d63031; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px;">🎯 推荐资源</div>
+                                <a href="{link}" target="_blank" rel="noopener noreferrer" style="display: block; text-decoration: none; color: inherit;">
                                     <img src="{image}" alt="广告推荐" loading="lazy"
+                                         style="max-width: 100%; height: auto; border-radius: 10px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2); transition: transform 0.3s ease; display: block !important;"
                                          onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZmRjYjZlIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiNmZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7kuIrlkI7kvJHnu4Tkurrov4flhYjor53vvIzohJnoibw8vdGV4dD48L3N2Zz4=';">
                                 </a>
                             </div>
