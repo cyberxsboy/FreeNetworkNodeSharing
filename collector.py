@@ -30,7 +30,7 @@ class ContentCollector:
         if not self.config:
             print("❌ 无法加载配置文件，使用默认配置")
             self.config = {
-                "siteDomain": "your-domain.github.io",
+                "siteDomain": "https://v2ray.nrcs.qzz.io",
                 "sources": [],
                 "ad": {
                     "link": "https://www.112112789.xyz/?code=uq27o1Ko",
