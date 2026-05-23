@@ -1,5 +1,5 @@
 {
-  "siteDomain": "localhost:8080",
+  "siteDomain": "v2ray.nrcs.qzz.io",
   "sources": [
     {
       "name": "V2ray节点",
