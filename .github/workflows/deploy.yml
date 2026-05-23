@@ -129,6 +129,7 @@ Allow: /
 Allow: /index.html
 Allow: /sitemap.xml
 
+
 # 禁止访问动态文件和数据文件
 Disallow: /*.json$
 Disallow: /*.py$
