@@ -6,6 +6,10 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+    paths:
+      - 'config.json'
+      - 'collector.py'
+      - '.github/workflows/deploy.yml'
 
 permissions:
   contents: write
@@ -17,178 +21,110 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    
     steps:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Generate sitemap.xml
+      - name: Generate files from config.json
         run: |
-          DOMAIN=$(python3 -c "import json; print(json.load(open('config.json')).get('siteDomain',''))" 2>/dev/null || echo "")
-          PROTO=$(python3 -c "print(json.load(open('config.json')).get('settings',{}).get('protocol','https'))" 2>/dev/null || echo "https")
+          python3 << 'EOF'
+          import json
+          import os
+          from datetime import datetime
           
-          [[ "$DOMAIN" == http* ]] && URL="$DOMAIN" || URL="${PROTO}://${DOMAIN}"
+          print("Reading config.json...")
+          with open('config.json', 'r', encoding='utf-8') as f:
+              config = json.load(f)
           
-          cat > sitemap.xml << 'XMLEOF'
-          <?xml version='1.0' encoding='utf-8'?>
+          domain = config.get('siteDomain', '')
+          protocol = config.get('settings', {}).get('protocol', 'https')
+          
+          if domain.startswith(('http://', 'https://')):
+              base_url = domain
+          else:
+              base_url = f"{protocol}://{domain}"
+          
+          today = datetime.now().strftime('%Y-%m-%d')
+          now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+          
+          print(f"Domain: {base_url}")
+          print(f"Date: {today}")
+          
+          sitemap = f'''<?xml version='1.0' encoding='utf-8'?>
           <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-            <url><loc>BASEURL/</loc><lastmod>DATE</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
-            <url><loc>BASEURL/index.html</loc><lastmod>DATE</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
-          </urlset>
-          XMLEOF
+            <url><loc>{base_url}/</loc><lastmod>{today}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
+            <url><loc>{base_url}/index.html</loc><lastmod>{today}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
+          </urlset>'''
           
-          sed -i "s|BASEURL|${URL}|g; s|DATE|$(date +%Y-%m-%d)|g" sitemap.xml
-
-      - name: Generate robots.txt
-        run: |
-          DOMAIN=$(python3 -c "import json; print(json.load(open('config.json')).get('siteDomain',''))" 2>/dev/null || echo "")
-          PROTO=$(python3 -c "print(json.load(open('config.json')).get('settings',{}).get('protocol','https'))" 2>/dev/null || echo "https")
+          with open('sitemap.xml', 'w', encoding='utf-8') as f:
+              f.write(sitemap)
+          print("✓ sitemap.xml generated")
           
-          [[ "$DOMAIN" == http* ]] && URL="$DOMAIN" || URL="${PROTO}://${DOMAIN}"
-          
-          cat > robots.txt << 'EOF'
-          User-agent: *
+          robots = f'''User-agent: *
           Allow: /
           Allow: /index.html
           Allow: /sitemap.xml
           Disallow: /*.json$
           Disallow: /*.py$
           Disallow: /.github/
-          Sitemap: BASEURL/sitemap.xml
+          Sitemap: {base_url}/sitemap.xml'''
+          
+          with open('robots.txt', 'w', encoding='utf-8') as f:
+              f.write(robots)
+          print("✓ robots.txt generated")
+          
+          if os.path.exists('data.json'):
+              with open('data.json', 'r', encoding='utf-8') as f:
+                  data = json.load(f)
+              
+              data['siteDomain'] = base_url
+              data['ad'] = config.get('ad', {})
+              data['lastConfigUpdate'] = now
+              
+              sources_cfg = config.get('sources', [])
+              source_names = [s['name'] for s in sources_cfg]
+              existing_sources = data.get('sources', {})
+              
+              for name in list(existing_sources.keys()):
+                  if name not in source_names:
+                      del existing_sources[name]
+              
+              data['sourceNames'] = list(existing_sources.keys())
+              data['stats'] = {
+                  'totalSources': len(existing_sources),
+                  'totalItems': sum(len(items) for items in existing_sources.values()),
+                  'sourceStats': {name: len(items) for name, items in existing_sources.items()}
+              }
+          else:
+              data = {
+                  'siteDomain': base_url,
+                  'ad': config.get('ad', {}),
+                  'sources': {},
+                  'sourceNames': [],
+                  'stats': {'totalSources': 0, 'totalItems': 0, 'sourceStats': {}},
+                  'lastConfigUpdate': now,
+                  'lastCollection': None
+              }
+          
+          with open('data.json', 'w', encoding='utf-8') as f:
+              json.dump(data, f, ensure_ascii=False, indent=2)
+          print("✓ data.json updated")
+          
+          print("\nDone! All files generated.")
           EOF
-          
-          sed -i "s|BASEURL|${URL}|g" robots.txt
 
-      - name: Update data.json with current config (NO data collection)
-        run: |
-          python3 << 'PYEOF'
-          import json
-          from datetime import datetime
-          
-          print("=" * 60)
-          print("📝 Updating data.json from config.json")
-          print("=" * 60)
-          
-          try:
-              with open('config.json', 'r', encoding='utf-8') as f:
-                  config = json.load(f)
-              
-              domain = config.get('siteDomain', '')
-              protocol = config.get('settings', {}).get('protocol', 'https')
-              
-              if not domain.startswith(('http://', 'https://')):
-                  base_url = f"{protocol}://{domain}"
-              else:
-                  base_url = domain
-              
-              print(f"\nConfig loaded:")
-              print(f"  Domain: {domain}")
-              print(f"  Protocol: {protocol}")
-              print(f"  Base URL: {base_url}")
-              
-              if not base_url or base_url == f"{protocol}://":
-                  print("\n⚠️ No valid domain configured, skipping update")
-                  exit(0)
-              
-              try:
-                  with open('data.json', 'r', encoding='utf-8') as f:
-                      data = json.load(f)
-                  
-                  old_domain = data.get('siteDomain', '')
-                  data['siteDomain'] = base_url
-                  
-                  ad_config = config.get('ad', {})
-                  data['ad'] = ad_config
-                  
-                  sources_cfg = config.get('sources', [])
-                  source_names_configured = [s['name'] for s in sources_cfg]
-                  existing_sources = data.get('sources', {})
-                  
-                  removed_count = 0
-                  for source_name in list(existing_sources.keys()):
-                      if source_name not in source_names_configured:
-                          del existing_sources[source_name]
-                          removed_count += 1
-                  
-                  data['sourceNames'] = list(existing_sources.keys())
-                  data['stats'] = {
-                      'totalSources': len(existing_sources),
-                      'totalItems': sum(len(items) for items in existing_sources.values()),
-                      'sourceStats': {name: len(items) for name, items in existing_sources.items()}
-                  }
-                  
-                  data['lastConfigUpdate'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                  
-                  with open('data.json', 'w', encoding='utf-8') as f:
-                      json.dump(data, f, ensure_ascii=False, indent=2)
-                  
-                  print(f"\n✅ data.json updated successfully!")
-                  print(f"   File size: {__import__('os').path.getsize('data.json')} bytes")
-                  
-                  if old_domain and old_domain != base_url:
-                      print(f"   🌐 Domain changed: {old_domain} -> {base_url}")
-                  if removed_count > 0:
-                      print(f"   🗑️ Removed {removed_count} invalid sources")
-                  
-              except FileNotFoundError:
-                  print(f"\n⚠️ data.json not found, creating new one...")
-                  new_data = {
-                      'siteDomain': base_url,
-                      'ad': config.get('ad', {}),
-                      'sources': {},
-                      'sourceNames': [],
-                      'stats': {
-                          'totalSources': 0,
-                          'totalItems': 0,
-                          'sourceStats': {}
-                      },
-                      'lastConfigUpdate': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                      'lastCollection': None
-                  }
-                  
-                  with open('data.json', 'w', encoding='utf-8') as f:
-                      json.dump(new_data, f, ensure_ascii=False, indent=2)
-                  
-                  print(f"✅ New data.json created")
-              
-              print("\n" + "=" * 60)
-              print("✅ Config sync completed (NO data collection)")
-              print("=" * 60)
-              
-          except Exception as e:
-              print(f"\n❌ Error: {e}")
-              import traceback
-              traceback.print_exc()
-              exit(1)
-          PYEOF
-
-      - name: Commit static files back to repo
+      - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add sitemap.xml robots.txt data.json
-          git diff --cached --quiet || git commit -m "Auto-update static files from config.json [no collection]"
-          git push || true
-
-      - name: Show generated files
-        run: |
-          echo "=== Generated Files ==="
-          ls -lh sitemap.xml robots.txt data.json
-          echo ""
-          echo "=== sitemap.xml ==="
-          cat sitemap.xml
-          echo ""
-          echo "=== robots.txt ==="
-          cat robots.txt
-          echo ""
-          echo "=== data.json (first 20 lines) ==="
-          head -20 data.json
+          git diff --cached --quiet && echo "No changes to commit" || (git commit -m "Update static files from config.json" && git push)
 
       - uses: actions/configure-pages@v4
-      
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
@@ -198,6 +134,6 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     runs-on: ubuntu-latest
-    needs: build
+    needs: build-and-deploy
     steps:
       - uses: actions/deploy-pages@v4
