@@ -3,17 +3,7 @@ name: Auto Deploy to GitHub Pages
 on:
   schedule:
     - cron: '0 0 * * *'
-  
   workflow_dispatch:
-    inputs:
-      skip_collect:
-        description: '跳过数据采集（只更新静态文件）'
-        required: false
-        default: 'false'
-        type: choice
-        options:
-          - 'false'
-          - 'true'
 
 permissions:
   contents: read
@@ -40,166 +30,15 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
-      # ============================================================
-      # 核心步骤：生成所有静态文件（始终执行！）
-      # ============================================================
-      - name: Generate static files from config.json
+      - name: Generate static files
         run: |
-          echo "============================================"
-          echo "开始生成静态文件"
-          echo "============================================"
-          echo ""
-          
-          if [ ! -f "config.json" ]; then
-            echo "❌ 错误：找不到 config.json"
-            exit 1
-          fi
-          
-          echo "✅ 找到 config.json"
-          echo ""
-          
-          # 使用内联Python脚本生成所有文件
-          python3 << 'ENDOFPYTHON'
-          import json
-          import os
-          from datetime import datetime
-          
-          print("📖 正在读取配置...")
-          
-          with open('config.json', 'r', encoding='utf-8') as f:
-              config = json.load(f)
-          
-          domain = config.get('siteDomain', 'your-domain.github.io')
-          protocol = config.get('settings', {}).get('protocol', 'https')
-          
-          if not domain.startswith(('http://', 'https://')):
-              base_url = f"{protocol}://{domain}"
-          else:
-              base_url = domain
-          
-          print(f"   域名: {domain}")
-          print(f"   协议: {protocol}")
-          print(f"   URL: {base_url}")
-          print("")
-          
-          # ---- 生成 sitemap.xml ----
-          print("[1/3] 生成 sitemap.xml...")
-          
-          sitemap = f'''<?xml version='1.0' encoding='utf-8'?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>{base_url}/</loc>
-    <lastmod>{datetime.now().strftime('%Y-%m-%d')}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>{base_url}/index.html</loc>
-    <lastmod>{datetime.now().strftime('%Y-%m-%d')}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
-</urlset>'''
-          
-          with open('sitemap.xml', 'w', encoding='utf-8') as f:
-              f.write(sitemap)
-          
-          print(f"   ✅ 完成 ({len(sitemap)} bytes)")
-          print(f"   📍 {base_url}/")
-          print("")
-          
-          # ---- 生成 robots.txt ----
-          print("[2/3] 生成 robots.txt...")
-          
-          robots = f"""# Robots.txt for {base_url}
-# Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} UTC
-#
-User-agent: *
-Allow: /
-Allow: /index.html
-Allow: /sitemap.xml
-  
-Disallow: /*.json$
-Disallow: /*.py$
-Disallow: /*.sh$
-Disallow: /*.yml$
-Disallow: /*.yaml$
-Disallow: /config*
-Disallow: /data*
-Disallow: /collector*
-Disallow: /.github/
-  
-Sitemap: {base_url}/sitemap.xml"""
-          
-          with open('robots.txt', 'w', encoding='utf-8') as f:
-              f.write(robots)
-          
-          print(f"   ✅ 完成 ({len(robots)} bytes)")
-          print(f"   🔗 Sitemap: {base_url}/sitemap.xml")
-          print("")
-          
-          # ---- 更新 data.json ----
-          print("[3/3] 更新 data.json...")
-          
-          if os.path.exists('data.json'):
-              with open('data.json', 'r', encoding='utf-8') as f:
-                  data = json.load(f)
-              
-              old_domain = data.get('siteDomain', '')
-              data['siteDomain'] = base_url
-              
-              ad_config = config.get('ad', {})
-              data['ad'] = ad_config
-              
-              sources = config.get('sources', [])
-              source_names = [s['name'] for s in sources]
-              existing_sources = data.get('sources', {})
-              
-              removed = 0
-              for name in list(existing_sources.keys()):
-                  if name not in source_names:
-                      del existing_sources[name]
-                      removed += 1
-              
-              data['sourceNames'] = list(existing_sources.keys())
-              data['stats'] = {
-                  'totalSources': len(existing_sources),
-                  'totalItems': sum(len(items) for items in existing_sources.values()),
-                  'sourceStats': {n: len(i) for n, i in existing_sources.items()}
-              }
-              
-              with open('data.json', 'w', encoding='utf-8') as f:
-                  json.dump(data, f, ensure_ascii=False, indent=2)
-              
-              print(f"   ✅ 完成")
-              if old_domain != base_url:
-                  print(f"   🌐 域名已更新: {old_domain} → {base_url}")
-              if removed > 0:
-                  print(f"   🗑️ 清理了 {removed} 个数据源")
-          else:
-              print(f"   ⚠️ data.json 不存在，跳过")
-          
-          print("")
-          print("=" * 50)
-          print("✅ 静态文件生成完成！")
-          print("=" * 50)
-          ENDOFPYTHON
-          
-          echo ""
-          echo "验证生成的文件..."
-          ls -lh sitemap.xml robots.txt data.json 2>/dev/null || true
-          echo ""
-          echo "============================================"
+          python3 generate_static.py || python generate_static.py
 
-      # 可选：执行数据采集
-      - name: Run collector (if not skipped)
-        if: github.event.inputs.skip_collect != 'true'
+      - name: Run collector
         run: |
-          echo "开始数据采集..."
-          python collector.py --once || echo "采集完成（可能有警告）"
-          echo ""
+          python3 collector.py --once || python collector.py --once || echo "Collector skipped"
+        continue-on-error: true
 
-      # 配置并部署到Pages
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
