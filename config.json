@@ -22,7 +22,7 @@
     "image": "gg.png"
   },
   "settings": {
-    "intervalMinutes": 720,
+    "intervalMinutes": 480,
     "protocol": "https"
   }
 }
