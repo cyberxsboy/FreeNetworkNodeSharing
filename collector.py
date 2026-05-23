@@ -24,13 +24,15 @@ class ContentCollector:
         self.output_file = self.base_dir / "data.json"
         self.sitemap_file = self.base_dir / "sitemap.xml"
         self.robots_file = self.base_dir / "robots.txt"
-        
         self.config = self.load_config()
+        
+        self._old_domain = self.config.get('siteDomain', '') if self.config else ''
+        self._old_protocol = self.config.get('settings', {}).get('protocol', 'https') if self.config else 'https'
         
         if not self.config:
             print("❌ 无法加载配置文件，使用默认配置")
             self.config = {
-                "siteDomain": "https://v2ray.nrcs.qzz.io",
+                "siteDomain": "your-domain.github.io",
                 "sources": [],
                 "ad": {
                     "link": "https://www.112112789.xyz/?code=uq27o1Ko",
@@ -61,10 +63,94 @@ class ContentCollector:
             with open(self.config_file, 'w', encoding='utf-8') as f:
                 json.dump(self.config, f, ensure_ascii=False, indent=2)
             print(f"✅ 配置文件已保存: {self.config_file}")
+            
+            self._check_and_regenerate()
+            
             return True
         except Exception as e:
             print(f"❌ 保存配置失败: {e}")
             return False
+
+    def _check_and_regenerate(self):
+        try:
+            new_domain = self.config.get('siteDomain', '')
+            new_protocol = self.config.get('settings', {}).get('protocol', 'https')
+            
+            domain_changed = (new_domain != self._old_domain)
+            protocol_changed = (new_protocol != self._old_protocol)
+            
+            if domain_changed or protocol_changed:
+                print("\n🔄 检测到域名/协议变更，正在重新生成静态文件...")
+                
+                if self.output_file.exists():
+                    try:
+                        with open(self.output_file, 'r', encoding='utf-8') as f:
+                            existing_data = json.load(f)
+                        
+                        existing_data['siteDomain'] = self.get_base_url()
+                        
+                        with open(self.output_file, 'w', encoding='utf-8') as f:
+                            json.dump(existing_data, f, ensure_ascii=False, indent=2)
+                        
+                        print(f"✅ 数据文件已更新: {self.output_file}")
+                        
+                        self.generate_sitemap(existing_data)
+                        self.generate_robots_txt()
+                        
+                        if domain_changed:
+                            print(f"🌐 域名变更: {self._old_domain} → {new_domain}")
+                        if protocol_changed:
+                            print(f"🔒 协议变更: {self._old_protocol} → {new_protocol}")
+                        
+                    except Exception as e:
+                        print(f"⚠️  更新数据文件失败: {e}")
+                else:
+                    self.generate_sitemap({'siteDomain': self.get_base_url()})
+                    self.generate_robots_txt()
+                    
+                    if domain_changed:
+                        print(f"🌐 域名设置: {new_domain}")
+                    if protocol_changed:
+                        print(f"🔒 协议设置: {new_protocol}")
+                
+                self._old_domain = new_domain
+                self._old_protocol = new_protocol
+                
+            elif self.output_file.exists():
+                print("✨ 配置已更新，检测到现有数据文件...")
+                try:
+                    with open(self.output_file, 'r', encoding='utf-8') as f:
+                        existing_data = json.load(f)
+                    
+                    ad_config = self.config.get('ad', {})
+                    existing_data['ad'] = ad_config
+                    existing_data['siteDomain'] = self.get_base_url()
+                    
+                    source_names_configured = [s['name'] for s in self.config.get('sources', [])]
+                    existing_sources = existing_data.get('sources', {})
+                    
+                    for source_name in list(existing_sources.keys()):
+                        if source_name not in source_names_configured:
+                            del existing_sources[source_name]
+                            print(f"   🗑️ 已移除数据源: {source_name}")
+                    
+                    existing_data['sourceNames'] = list(existing_sources.keys())
+                    existing_data['stats'] = {
+                        'totalSources': len(existing_sources),
+                        'totalItems': sum(len(items) for items in existing_sources.values()),
+                        'sourceStats': {name: len(items) for name, items in existing_sources.items()}
+                    }
+                    
+                    with open(self.output_file, 'w', encoding='utf-8') as f:
+                        json.dump(existing_data, f, ensure_ascii=False, indent=2)
+                    
+                    print(f"✅ 静态文件已重新生成: {self.output_file}")
+                    
+                except Exception as e:
+                    print(f"⚠️  重新生成失败: {e}")
+            
+        except Exception as e:
+            print(f"⚠️  自动生成检查失败: {e}")
 
     def add_source(self, name, url, enabled=True):
         new_source = {
