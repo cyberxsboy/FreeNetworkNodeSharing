@@ -11,6 +11,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  contents: write
 
 concurrency:
   group: pages
@@ -22,6 +23,8 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate sitemap.xml
         run: |
@@ -39,8 +42,6 @@ jobs:
           XMLEOF
           
           sed -i "s|BASEURL|${URL}|g; s|DATE|$(date +%Y-%m-%d)|g" sitemap.xml
-          
-          echo "sitemap.xml created with URL: ${URL}"
 
       - name: Generate robots.txt
         run: |
@@ -61,8 +62,14 @@ jobs:
           EOF
           
           sed -i "s|BASEURL|${URL}|g" robots.txt
-          
-          echo "robots.txt created"
+
+      - name: Commit files back to repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add sitemap.xml robots.txt
+          git diff --cached --quiet || git commit -m "Auto-update static files from config.json"
+          git push || true
 
       - name: Show generated files
         run: |
