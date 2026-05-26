@@ -83,6 +83,7 @@ jobs:
               data['siteDomain'] = base_url
               data['ad'] = config.get('ad', {})
               data['lastConfigUpdate'] = now
+              data['updateTime'] = now
               
               sources_cfg = config.get('sources', [])
               source_names = [s['name'] for s in sources_cfg]
@@ -106,6 +107,7 @@ jobs:
                   'sourceNames': [],
                   'stats': {'totalSources': 0, 'totalItems': 0, 'sourceStats': {}},
                   'lastConfigUpdate': now,
+                  'updateTime': now,
                   'lastCollection': None
               }
           
@@ -140,4 +142,3 @@ jobs:
     needs: build-and-deploy
     steps:
       - uses: actions/deploy-pages@v4
-      
