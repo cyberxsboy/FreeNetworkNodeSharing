@@ -146,6 +146,7 @@ class ContentCollector:
                             existing_data = json.load(f)
                         
                         existing_data['siteDomain'] = self.get_base_url()
+                        existing_data['updateTime'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                         
                         with open(self.output_file, 'w', encoding='utf-8') as f:
                             json.dump(existing_data, f, ensure_ascii=False, indent=2)
@@ -182,6 +183,7 @@ class ContentCollector:
                         'totalItems': sum(len(items) for items in existing_sources.values()),
                         'sourceStats': {name: len(items) for name, items in existing_sources.items()}
                     }
+                    existing_data['updateTime'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                     
                     with open(self.output_file, 'w', encoding='utf-8') as f:
                         json.dump(existing_data, f, ensure_ascii=False, indent=2)
@@ -624,6 +626,7 @@ Crawl-delay: 1
                     'totalItems': sum(len(items) for items in existing_sources.values()),
                     'sourceStats': {name: len(items) for name, items in existing_sources.items()}
                 }
+                existing_data['updateTime'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 
                 with open(self.output_file, 'w', encoding='utf-8') as f:
                     json.dump(existing_data, f, ensure_ascii=False, indent=2)
