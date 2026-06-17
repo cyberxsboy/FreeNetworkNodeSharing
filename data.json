@@ -1,5 +1,5 @@
 {
-  "updateTime": "2026-06-16 02:43:04",
+  "updateTime": "2026-06-17 02:39:28",
   "siteDomain": "https://v2ray.nrcs.qzz.io",
   "sources": {
     "V2ray节点": [
@@ -74,5 +74,5 @@
       "免费节点": 20
     }
   },
-  "lastConfigUpdate": "2026-06-16 02:43:04"
+  "lastConfigUpdate": "2026-06-17 02:39:28"
 }
